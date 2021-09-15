@@ -19,6 +19,7 @@
           "error"
         ]
       }
-    ]
+    ],
+    "object-curly-newline": 0
   }
 }
