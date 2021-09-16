@@ -8,6 +8,7 @@
     "plugin:@typescript-eslint/eslint-recommended"
   ],
   "rules": {
+    "class-methods-use-this": 0,
     "lines-between-class-members": 0,
     "linebreak-style": 0,
     "no-console": [
