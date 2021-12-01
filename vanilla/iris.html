@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Iris</title>
+    <style>
+      body {
+        background-color: #333;
+      }
+    </style>
+    <script src="https://cdn.plot.ly/plotly-2.2.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/danfojs@0.3.3/lib/bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis"></script>
+  </head>
+
+  <body>
+    <script>
+      const TRAIN_SET_URL =
+        'https://raw.githubusercontent.com/ajaxlab/tfjs-study/main/csv/iris_train.csv';
+      const TEST_SET_URL =
+        'https://raw.githubusercontent.com/ajaxlab/tfjs-study/main/csv/iris_test.csv';
+
+      dfd.read_csv(TRAIN_SET_URL, { header: true }).then((df) => {
+        // 1. Data set
+        df.head(3).print();
+        console.log(df.shape);
+
+        const X_train = df.loc({
+          columns: ['petal_h', 'petal_w', 'sepal_h', 'sepal_w'],
+        });
+        X_train.head(3).print();
+        console.log(X_train.shape);
+
+        const encoder = new dfd.OneHotEncoder();
+        const Y_train = encoder.fit(df['type']);
+        Y_train.head(3).print();
+        console.log(Y_train.shape);
+
+        // 2. Model
+        const inputs = tf.input({ shape: [4] });
+        const hidden = tf.layers
+          .dense({ units: 4, activation: 'relu' })
+          .apply(inputs);
+        const outputs = tf.layers
+          .dense({ units: 3, activation: 'softmax' })
+          .apply(hidden);
+        const model = tf.model({ inputs, outputs });
+        model.compile({
+          optimizer: tf.train.adam(),
+          loss: 'categoricalCrossentropy',
+          // loss: tf.losses.meanSquaredError,
+          metrics: ['accuracy'],
+        });
+        tfvis.show.modelSummary({ name: 'Summary', tab: 'Model' }, model);
+
+        // 3. Training
+        const history = [];
+        model
+          .fit(X_train.tensor, Y_train.tensor, {
+            epochs: 1000,
+            callbacks: {
+              onEpochEnd(epoch, logs) {
+                if (epoch % 100 === 0) {
+                  console.log(epoch, logs);
+                }
+                history.push(logs);
+                tfvis.show.history(
+                  {
+                    name: 'Loss',
+                    tab: 'History',
+                  },
+                  history,
+                  ['loss'],
+                );
+                tfvis.show.history(
+                  {
+                    name: 'accuracy',
+                    tab: 'History',
+                  },
+                  history,
+                  ['acc'],
+                );
+              },
+            },
+          })
+          .then((result) => {
+            console.log(result);
+            dfd.read_csv(TEST_SET_URL, { header: true }).then((df) => {
+              console.log('df', df);
+              const X_test = df.loc({
+                columns: ['petal_h', 'petal_w', 'sepal_h', 'sepal_w'],
+              });
+              const Y_test = encoder.fit(df['type']);
+              const inference = new dfd.DataFrame(model.predict(X_test.tensor));
+              inference.print();
+              Y_test.print();
+            });
+          });
+      });
+    </script>
+  </body>
+</html>
