@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Iris</title>
+    <style>
+      body {
+        background-color: #333;
+      }
+      .container {
+        width: 50%;
+        color: white;
+      }
+      .container select,
+      .container button {
+        height: 1.6rem;
+      }
+      .container input {
+        width: 7rem;
+        height: 1.2rem;
+      }
+    </style>
+    <script src="https://cdn.plot.ly/plotly-2.2.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/danfojs@0.3.3/lib/bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis"></script>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>TensorFlow.js</h1>
+      <h2>Iris Data Set</h2>
+      <h3>Train Set</h3>
+      <div id="trainUrl"></div>
+      <h3>Test Set</h3>
+      <div id="testUrl"></div>
+      <h3>Training</h3>
+      <select id="backend">
+        <option value="cpu">cpu</option>
+        <option value="webgl">webgl</option>
+      </select>
+      <input type="text" id="epoch" value="100" />
+      <button id="btnStart">Start</button>
+      <div id="log"></div>
+      <div id="loss"></div>
+      <div id="accuracy"></div>
+      <h3>GT</h3>
+      <div id="gt_table"></div>
+      <h3>Inference</h3>
+      <div id="inference_table"></div>
+      <h3>GT</h3>
+      <div id="gt_chart"></div>
+      <h3>Inference</h3>
+      <div id="inference_chart"></div>
+    </div>
+
+    <script>
+      let isTraining = false;
+      let EPOCH;
+      const TRAIN_SET_URL =
+        'https://raw.githubusercontent.com/ajaxlab/tfjs-study/main/csv/iris_train.csv';
+      const TEST_SET_URL =
+        'https://raw.githubusercontent.com/ajaxlab/tfjs-study/main/csv/iris_test.csv';
+
+      trainUrl.innerText = TRAIN_SET_URL;
+      testUrl.innerText = TEST_SET_URL;
+
+      tf.setBackend('cpu');
+
+      function prepareData() {
+        return dfd.read_csv(TRAIN_SET_URL).then((df) => {
+          df.head(3).print();
+          console.log(df.shape);
+
+          const X_train = df.loc({
+            columns: ['petal_h', 'petal_w', 'sepal_h', 'sepal_w'],
+          });
+          X_train.head(3).print();
+          console.log(X_train.shape);
+
+          const encoder = new dfd.OneHotEncoder();
+          const Y_train = encoder.fit(df['type']);
+          Y_train.head(3).print();
+          console.log(Y_train.shape);
+
+          return {
+            X_train,
+            Y_train,
+          };
+        });
+      }
+
+      function createModel() {
+        let hidden;
+        const inputs = tf.input({ shape: [4] });
+        hidden = tf.layers
+          .dense({ units: 8, activation: 'swish' })
+          .apply(inputs);
+        hidden = tf.layers
+          .dense({ units: 8, activation: 'swish' })
+          .apply(hidden);
+        const outputs = tf.layers
+          .dense({ units: 3, activation: 'softmax' })
+          .apply(hidden);
+        const model = tf.model({ inputs, outputs });
+        model.compile({
+          optimizer: tf.train.adam(),
+          loss: 'categoricalCrossentropy',
+          // loss: tf.losses.meanSquaredError,
+          metrics: ['accuracy'],
+        });
+        tfvis.show.modelSummary({ name: 'Summary', tab: 'Model' }, model);
+        return model;
+      }
+
+      function train(model, X_train, Y_train) {
+        const history = [];
+        return model
+          .fit(X_train.tensor, Y_train.tensor, {
+            epochs: EPOCH,
+            callbacks: {
+              onEpochEnd(epoch, logs) {
+                log.innerText = 'Epoch: ' + epoch + `/${EPOCH}`;
+                loss.innerText = 'Loss: ' + logs.loss;
+                accuracy.innerText = 'Accuracy: ' + logs.acc;
+                if (epoch % 100 === 0) {
+                  console.log(epoch, logs);
+                }
+                history.push(logs);
+                tfvis.show.history(
+                  {
+                    name: 'Loss',
+                    tab: 'History',
+                  },
+                  history,
+                  ['loss'],
+                );
+                tfvis.show.history(
+                  {
+                    name: 'accuracy',
+                    tab: 'History',
+                  },
+                  history,
+                  ['acc'],
+                );
+              },
+            },
+          })
+          .then((result) => {
+            btnStart.disabled = false;
+            isTraining = false;
+            return result;
+          });
+      }
+
+      function infer(model, result) {
+        console.log(result);
+        dfd.read_csv(TEST_SET_URL).then((df) => {
+          console.log('df', df);
+          const X_test = df.loc({
+            columns: ['petal_h', 'petal_w', 'sepal_h', 'sepal_w'],
+          });
+          const encoder = new dfd.OneHotEncoder();
+          const gt = encoder.fit(df['type']);
+          const inference = new dfd.DataFrame(model.predict(X_test.tensor));
+          gt.plot('gt_table').table();
+          inference.plot('inference_table').table();
+          gt.plot('gt_chart').line();
+          inference.plot('inference_chart').line();
+        });
+      }
+
+      async function main() {
+        const { X_train, Y_train } = await prepareData();
+        const model = createModel();
+        const result = await train(model, X_train, Y_train);
+        infer(model, result);
+      }
+
+      btnStart.addEventListener('click', () => {
+        if (!isTraining) {
+          isTraining = true;
+          btnStart.disabled = true;
+          EPOCH = parseInt(epoch.value, 10);
+          gt_table.innerHTML = '';
+          inference_table.innerHTML = '';
+          gt_chart.innerHTML = '';
+          inference_chart.innerHTML = '';
+          main();
+        }
+      });
+
+      backend.addEventListener('change', () => {
+        tf.setBackend(backend.value);
+      });
+    </script>
+  </body>
+</html>
