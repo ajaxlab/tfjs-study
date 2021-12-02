@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Iris</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        margin: 1rem 2rem;
+        width: 50%;
+      }
+      .container * {
+        font-family: 'Roboto Condensed', sans-serif;
+      }
+      a {
+        color: steelblue;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .container select,
+      .container button {
+        height: 1.6rem;
+      }
+      .container input {
+        width: 3rem;
+        height: 1.2rem;
+      }
+      #trainingStatus {
+        margin-top: 1rem;
+      }
+      #inferenceResult > div {
+        width: 100%;
+        height: 1rem;
+        border-radius: 0.2rem;
+        background-color: #eee;
+      }
+      #inferenceResult.idle > div {
+        width: 100%;
+      }
+      #inferenceResult.training > div {
+        animation: 1s ease-in 1s infinite alternate training;
+      }
+      #inferenceResult.ready > div {
+        height: unset;
+        border-radius: unset;
+        background-color: unset;
+      }
+      @keyframes training {
+        0% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h2>Iris Classification</h2>
+      <h3>Train Data Set</h3>
+      <a id="trainUrl"></a>
+      <h3>Test Data Set</h3>
+      <a id="testUrl"></a>
+      <h3>Training</h3>
+      <select id="backend">
+        <option value="cpu">cpu</option>
+        <option value="webgl">webgl</option>
+      </select>
+      <select id="lossType">
+        <option value="categoricalCrossentropy">categoricalCrossentropy</option>
+        <option value="meanSquaredError">meanSquaredError</option>
+      </select>
+      <select id="hiddenLayers">
+        <option value="1">1 Hidden Layer</option>
+        <option value="2" selected>2 Hidden Layers</option>
+        <option value="3">3 Hidden Layers</option>
+        <option value="4">4 Hidden Layers</option>
+        <option value="5">5 Hidden Layers</option>
+      </select>
+      <input type="text" id="epoch" value="100" title="Epoch" />
+      <button id="btnStart">Start</button>
+      <div id="trainingStatus">
+        <div id="lossFunction"></div>
+        <div id="log"></div>
+        <div id="loss"></div>
+        <div id="accuracy"></div>
+        <div id="elapsed"></div>
+      </div>
+      <div id="inferenceResult" class="idle">
+        <h3>Ground Truth Table</h3>
+        <div id="gtTable"></div>
+        <h3>Inference Table</h3>
+        <div id="inferenceTable"></div>
+        <h3>Ground Truth Chart</h3>
+        <div id="gtChart"></div>
+        <h3>Inference Chart</h3>
+        <div id="inferenceChart"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.plot.ly/plotly-2.2.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/danfojs@0.3.3/lib/bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis"></script>
+    <script src="main.js"></script>
+  </body>
+</html>
